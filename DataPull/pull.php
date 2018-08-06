@@ -3,6 +3,8 @@
 abstract class DATA {
   const PUSH = 0;
   const PULL = 1;
+  const KEY1 = 0;
+  const KEY2 = 1;
 }
 
 class Pull extends DATA {
@@ -167,9 +169,9 @@ class Pull extends DATA {
         echo $this->conn->error;
       }
       if ($tbl == "scoutingdataheatmap") {
-		  self::HandleDataRIP($tbl, 0);
+		  self::HandleDataRIP($tbl, DATA::KEY1);
 	  } else {
-		  self::HandleDataRIP($tbl, 1);
+		  self::HandleDataRIP($tbl, DATA::KEY2);
 	  }
     } else if ($type == DATA::PUSH) {
       self::ExecuteSQLDEPLOY("matchschedule", "TRUNCATE matchschedule");
