@@ -1,8 +1,8 @@
 <?php
 
 
-
-//Written by Josh Latimer 2018
+//MS SQL Iteration
+//Written by Josh Latimer 2019
 //FRC Team 3098
 //Do not edit unless you know what youre doing
 //All settings that require change can be found in "pull.php"

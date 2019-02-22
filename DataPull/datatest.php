@@ -1,5 +1,11 @@
 <?php
 
+//MS SQL Iteration
+//Written by Josh Latimer 2019
+//FRC Team 3098
+//Do not edit unless you know what youre doing
+//All settings that require change can be found in "pull.php"
+
 abstract class DATA {
   const PUSH = 0;
   const PULL = 1;
