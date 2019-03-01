@@ -1,10 +1,13 @@
 <?php
 
+
 //MS SQL Iteration
 //Written by Josh Latimer 2019
 //FRC Team 3098
 //Do not edit unless you know what youre doing
 //All settings that require change can be found in "pull.php"
+
+
 
 abstract class DATA {
   const PUSH = 0;
@@ -12,6 +15,7 @@ abstract class DATA {
 }
 
 class Pull extends DATA {
+  protected $IP;
   protected $conn;
   protected $conn2;
   protected $query;
@@ -22,8 +26,8 @@ class Pull extends DATA {
 
   protected static function console($data) {
     //ChromePhp::log("[PHP LOG] " . $data);
-    //echo($data . " NEWLN ");
-    echo($data. "<br>");
+    echo($data . " NEWLN ");
+    //echo($data. "<br>");
   }
   protected static function ping($host, $port, $timeout=0.1) {
     try {
@@ -85,18 +89,17 @@ class Pull extends DATA {
     }
   }
 
-  function GetKeyIndex($result) {
-    $field = "id";
+  function GetKeyIndex($result, $key) {
     for ($i = 0; $i <= $result->field_count; $i++) {
       //var_dump($result->fetch_field_direct($i)->name);
-      if ($result->fetch_field_direct($i)->name == $field) {
+      if ($result->fetch_field_direct($i)->name == $key) {
         //self::console("found a field matching specified key at index: " . $i);
         return $i;
       }
     }
   }
 
-  function HandleDataRIP($tbl, $idcol) {
+  function HandleDataRIP($tbl, $key) {
     $iteration = 0;
     $duplicates = 0;
     $this->res = $this->query->get_result();
@@ -107,7 +110,7 @@ class Pull extends DATA {
     //var_dump($this->res->fetch_field_direct(2));
     //echo $this->GetKeyIndex($this->res);
     //break;
-    $key = $this->GetKeyIndex($this->res);
+    $keyindex = $this->GetKeyIndex($this->res, $key);
     while ($row = $this->res->fetch_row()) {
       $rowcount++;
       $this->inst = $this->inst . "INSERT INTO " . $tbl . " VALUES (";
@@ -115,7 +118,7 @@ class Pull extends DATA {
       for ($i = 0; $i < sizeof($row); $i++) {
         $iteration++;
         if ($i == 1) {
-          if (!self::CheckLocalDataDuplicates($tbl, $row[$key])) {
+          if (!self::CheckLocalDataDuplicates($tbl, $row[$keyindex])) {
             $duplicates++;
             $this->duplicate = TRUE;
             $this->inst = "";
@@ -179,7 +182,7 @@ class Pull extends DATA {
     self::console("-----------------------------------------END-------------------------------------------------");
   }
 
-  function MainSQL($tbl, $type) {
+  function MainSQL($tbl, $type, $key) {
     if ($type == DATA::PULL) {
       $this->query = $this->conn->prepare("SELECT * FROM " . $tbl);
       $this->query->execute();
@@ -187,9 +190,9 @@ class Pull extends DATA {
         echo $this->conn->error;
       }
       if ($tbl == "scoutingdataheatmap") {
-		  self::HandleDataRIP($tbl, 0);
+		  self::HandleDataRIP($tbl, $key);
 	  } else {
-		  self::HandleDataRIP($tbl, 1);
+		  self::HandleDataRIP($tbl, $key);
 	  }
     } else if ($type == DATA::PUSH) {
       self::ExecuteSQLDEPLOY("matchschedule", "TRUNCATE matchschedule");
@@ -204,7 +207,7 @@ class Pull extends DATA {
   }
 
 
-  function __construct($tblname) {
+  function __construct($params) {
     /*$this->IP = [
       "10.30.98.1",
       "10.30.98.2",
@@ -221,26 +224,26 @@ class Pull extends DATA {
       "10.30.98.13",
 	  "10.30.98.14"
   ];*/
-
-  $this->IP = ["192.168.1.154"];
+  $this->IP = $params->IParray;
     //mysqli_report(MYSQLI_REPORT_STRICT);
-    for ($ip = 2; $ip <= 20; $ip++) {
-      echo "Establishing Connection to: 10.30.98." . (string)$ip . ":1433 | Ping:";
-      try {
-        if (self::ping("10.30.98." . (string)$ip, 1433)) {
-          $this->conn = new mysqli($val, "appUser", "4E12486C3A0F8FA2DAE48D8DBCE2A52E30DB7AC114ACDADF2357C28ACE86C1A2", "3098_scouting_2018");
-          if (mysqli_connect_errno()) {
-            self::console("Failed!");
-          } else {
-            self::console("Connected!");
-          }
-          $this->conn2 = new mysqli("127.0.0.1", "appUser", "4E12486C3A0F8FA2DAE48D8DBCE2A52E30DB7AC114ACDADF2357C28ACE86C1A2", "3098_scouting_2018");
-          if ($tblname == "matchschedule") {
-            $this->MainSQL($tblname, DATA::PUSH);
-          } else {
-            $this->MainSQL($tblname, DATA::PULL);
-          }
-          //break;
+  for ($ip = 2; $ip <= 20; $ip++) {
+    echo "Establishing Connection to: 10.30.98." . (string)$ip . ":1433 | Ping:";
+    try {
+      if (self::ping("10.30.98." . (string)$ip, 1433)) {
+        $serverName = "10.30.98." . (string)$ip . "\\SQLEXPRESS17, 1433";
+        $this->conn = sqlsrv_connect($serverName, $params->connInfo);
+        if (!$this->conn) {
+          self::console("Failed!");
+        } else {
+          self::console("Connected!");
+        }
+        $this->conn2 = new mysqli("127.0.0.1", $params->username, $params->password, $params->database);
+        if ($params->tablename == "matchschedule") {
+          $this->MainSQL($params->tablename, DATA::PUSH, $params->key);
+        } else {
+          $this->MainSQL($params->tablename, DATA::PULL, $params->key);
+        }
+        //break;
         } else {
           self::console("Failed!");
         }
@@ -250,37 +253,11 @@ class Pull extends DATA {
       }
     }
   }
-    /*while (list(, $val) = each($this->IP)) {
-      echo "Establishing Connection to: " . $val . ":3306 | Ping:";
-      try {
-        if (self::ping($val, 3306)) {
-          $this->conn = new mysqli($val, "appUser", "4E12486C3A0F8FA2DAE48D8DBCE2A52E30DB7AC114ACDADF2357C28ACE86C1A2", "3098_scouting_2018");
-          if (mysqli_connect_errno()) {
-            self::console("Failed!");
-          } else {
-            self::console("Connected!");
-          }
-          $this->conn2 = new mysqli("127.0.0.1", "appUser", "4E12486C3A0F8FA2DAE48D8DBCE2A52E30DB7AC114ACDADF2357C28ACE86C1A2", "3098_scouting_2018");
-          if ($tblname == "matchschedule") {
-            $this->MainSQL($tblname, DATA::PUSH);
-          } else {
-            $this->MainSQL($tblname, DATA::PULL);
-          }
-          //break;
-        } else {
-          self::console("Failed!");
-        }
-      }
-      catch (Exception $e) {
-        self::console($e->getMessage());
-      }
-    }
-  }*/
 
 
 }
 
 //$pull = new Pull(JSON_decode(file_get_contents("php://input"))->tblname);
-$pull = new Pull("pitscoutingdata");
+//$pull = new Pull("pitscoutingdata");
 
 ?>
