@@ -208,23 +208,6 @@ class Pull extends DATA {
 
 
   function __construct($params) {
-    /*$this->IP = [
-      "10.30.98.1",
-      "10.30.98.2",
-      "10.30.98.3",
-      "10.30.98.4",
-      "10.30.98.5",
-      "10.30.98.6",
-      "10.30.98.7",
-      "10.30.98.8",
-      "10.30.98.9",
-      "10.30.98.10",
-      "10.30.98.11",
-      "10.30.98.12",
-      "10.30.98.13",
-	  "10.30.98.14"
-  ];*/
-  $this->IP = $params->IParray;
     //mysqli_report(MYSQLI_REPORT_STRICT);
   for ($ip = 2; $ip <= 20; $ip++) {
     echo "Establishing Connection to: 10.30.98." . (string)$ip . ":1433 | Ping:";
