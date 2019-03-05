@@ -15,7 +15,7 @@ $Parameters->key = (string)"id";
 $Parameters->connInfo = array(
   "Database"=>"ScoutingData",
   "UID"=>"sa",
-  "PWD"=>'Pa$$w0rd'
+  "PWD"=>'saPa$$w0rd'
 );
 
 

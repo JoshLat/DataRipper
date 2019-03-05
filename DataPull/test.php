@@ -26,8 +26,8 @@ class Pull extends DATA {
 
   protected static function console($data) {
     //ChromePhp::log("[PHP LOG] " . $data);
-    echo($data . " NEWLN ");
-    //echo($data. "<br>");
+    //echo($data . " NEWLN ");
+    echo($data. "<br>");
   }
   protected static function ping($host, $port, $timeout=0.1) {
     try {
@@ -209,22 +209,27 @@ class Pull extends DATA {
 
   function __construct($params) {
     //mysqli_report(MYSQLI_REPORT_STRICT);
+
   for ($ip = 2; $ip <= 20; $ip++) {
     echo "Establishing Connection to: 10.30.98." . (string)$ip . ":1433 | Ping:";
     try {
       if (self::ping("10.30.98." . (string)$ip, 1433)) {
-        $serverName = "10.30.98." . (string)$ip . "\\SQLEXPRESS17, 1433";
+        $serverName = "10.30.98." . (string)$ip . "\\SQLEXPRESS2017, 1433";
         $this->conn = sqlsrv_connect($serverName, $params->connInfo);
         if (!$this->conn) {
+          die( print_r( sqlsrv_errors(), true));
           self::console("Failed!");
         } else {
           self::console("Connected!");
+          $ip=21;
         }
-        $this->conn2 = new mysqli("127.0.0.1", $params->username, $params->password, $params->database);
+        if (!$this->conn2) {
+          $this->conn2 = sqlsrv_connect("localhost", $params->connInfo);
+        }
         if ($params->tablename == "matchschedule") {
-          $this->MainSQL($params->tablename, DATA::PUSH, $params->key);
+          //$this->MainSQL($params->tablename, DATA::PUSH, $params->key);
         } else {
-          $this->MainSQL($params->tablename, DATA::PULL, $params->key);
+          //$this->MainSQL($params->tablename, DATA::PULL, $params->key);
         }
         //break;
         } else {
