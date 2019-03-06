@@ -90,9 +90,11 @@ class Pull extends DATA {
   }
 
   function GetKeyIndex($result, $key) {
-    for ($i = 0; $i <= $result->field_count; $i++) {
+    for ($i = 0; $i <= sqlsrv_num_fields($result); $i++) {
       //var_dump($result->fetch_field_direct($i)->name);
-      if ($result->fetch_field_direct($i)->name == $key) {
+      //if ($result->fetch_field_direct($i)->name == $key) {
+      var_dump(sqlsrv_field_metadata($result)[$i]->Name);
+      if (sqlsrv_field_metadata($result) == $key) {
         //self::console("found a field matching specified key at index: " . $i);
         return $i;
       }
@@ -100,10 +102,15 @@ class Pull extends DATA {
   }
 
   function HandleDataRIP($tbl, $key) {
+    self::console("Starting HandleDataRIP");
+    var_dump($this->query);
     $iteration = 0;
     $duplicates = 0;
-    $this->res = $this->query->get_result();
-    $this->columns = ($this->res->field_count - 1);
+    //$this->res = $this->query->get_result();
+    $this->res = $this->query;
+    self::console($this->res);
+    $this->columns = (sqlsrv_num_fields($this->query) - 1);
+    self::console($this->columns);
     self::console("Parsing Data.... DONE!");
     self::console("Removing Duplicates.... DONE!");
     $rowcount = 0;
@@ -111,6 +118,7 @@ class Pull extends DATA {
     //echo $this->GetKeyIndex($this->res);
     //break;
     $keyindex = $this->GetKeyIndex($this->res, $key);
+    self::console($keyindex);
     while ($row = $this->res->fetch_row()) {
       $rowcount++;
       $this->inst = $this->inst . "INSERT INTO " . $tbl . " VALUES (";
@@ -183,11 +191,13 @@ class Pull extends DATA {
   }
 
   function MainSQL($tbl, $type, $key) {
+    self::console("Starting MainSQL");
     if ($type == DATA::PULL) {
-      $this->query = $this->conn->prepare("SELECT * FROM " . $tbl);
-      $this->query->execute();
-      if ($this->conn->error) {
-        echo $this->conn->error;
+      $this->query = sqlsrv_prepare($this->conn, "SELECT * FROM " . $tbl, array(NULL));
+      //$this->query = $this->conn->prepare("SELECT * FROM " . $tbl);
+      sqlsrv_execute($this->query);
+      if (!$this->query) {
+        echo sqlsrv_errors();
       }
       if ($tbl == "scoutingdataheatmap") {
 		  self::HandleDataRIP($tbl, $key);
@@ -199,8 +209,8 @@ class Pull extends DATA {
       $this->conn2 = new mysqli("127.0.0.1", "appUser", "4E12486C3A0F8FA2DAE48D8DBCE2A52E30DB7AC114ACDADF2357C28ACE86C1A2", "3098_scouting_2018");
       $this->query2 = $this->conn2->prepare("SELECT * FROM " . $tbl);
       $this->query2->execute();
-      if ($this->conn2->error) {
-        echo $this->conn2->error;
+      if (sqlsrv_errors()) {
+        echo sqlsrv_errors();
       }
       self::HandleDataDEPLOY($tbl);
     }
@@ -214,7 +224,7 @@ class Pull extends DATA {
     echo "Establishing Connection to: 10.30.98." . (string)$ip . ":1433 | Ping:";
     try {
       if (self::ping("10.30.98." . (string)$ip, 1433)) {
-        $serverName = "10.30.98." . (string)$ip . "\\SQLEXPRESS2017, 1433";
+        $serverName = "10.30.98." . (string)$ip . "\\MSSQLSERVER, 1433";
         $this->conn = sqlsrv_connect($serverName, $params->connInfo);
         if (!$this->conn) {
           die( print_r( sqlsrv_errors(), true));
@@ -229,7 +239,8 @@ class Pull extends DATA {
         if ($params->tablename == "matchschedule") {
           //$this->MainSQL($params->tablename, DATA::PUSH, $params->key);
         } else {
-          //$this->MainSQL($params->tablename, DATA::PULL, $params->key);
+
+          $this->MainSQL($params->tablename, DATA::PULL, $params->key);
         }
         //break;
         } else {

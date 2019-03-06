@@ -10,7 +10,7 @@ require './test.php';
 
 $Parameters = new stdClass();
 //$Parameters->tablename = (string)JSON_decode(file_get_contents("php://input"))->tblname;
-$Parameters->tablename = (string)"";
+$Parameters->tablename = (string)"scoutingData";
 $Parameters->key = (string)"id";
 $Parameters->connInfo = array(
   "Database"=>"ScoutingData",
