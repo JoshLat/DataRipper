@@ -102,17 +102,19 @@ class Pull extends DATA {
   function GetFieldNames($result) {
     $fields = NULL;
     for ($i = 0; $i <= (sqlsrv_num_fields($result) - 1); $i++) {
-      if ($i > 0) {
-        $fields += (", ''" . sqlsrv_field_metadata($result)[$i]["Name"] . "'");
-      } else if ($i === sqlsrv_num_fields($result) - 1) {
-        $fields += (sqlsrv_field_metadata($result)[$i]["Name"] . "')");
+      $inst = sqlsrv_field_metadata($result)[$i]["Name"];
+      self::console(sqlsrv_field_metadata($result)[$i]["Name"]);
+      if ($i == (sqlsrv_num_fields($result) - 1)) {
+        $fields = $fields . ", " . $inst . ")";
+      } else if ($i > 0) {
+        $fields = $fields . ", " . $inst;
       } else {
-        $fields += ("('" . sqlsrv_field_metadata($result)[$i]["Name"] . "'");
+        $fields = $fields . "(" . $inst;
       }
-
-        self::console("Found a field matching specified primary key at index: " . $i);
-        return $i;
     }
+    self::console("Created FieldNames for insert statement!");
+    //self::console($fields);
+    return $fields;
   }
 
   function HandleDataRIP($tbl, $key) {
@@ -136,7 +138,7 @@ class Pull extends DATA {
     while ($row = sqlsrv_fetch_array($this->res, SQLSRV_FETCH_NUMERIC)) {
       self::console("Iterations: " . $rowcount);
       $rowcount++;
-      $this->inst = $this->inst . "INSERT INTO " . $tbl . " " . $self::GetFieldNames(). " VALUES (";
+      $this->inst = $this->inst . "INSERT INTO " . $tbl . " " . self::GetFieldNames($this->res). " VALUES (";
       $this->duplicate = FALSE;
       for ($i = 0; $i < sizeof($row); $i++) {
         $iteration++;
@@ -151,15 +153,15 @@ class Pull extends DATA {
         if ($i == $this->columns) {
           if ($this->duplicate == FALSE) {
             $data = $row[$i];
-            if (is_string($data)) $this->inst = $this->inst . '"' . $data . '"); ';
-            if (is_int($data)) $this->inst = $this->inst . $data . "); ";
+            if (is_string($data)) $this->inst = $this->inst . "'" . $data . "'); ";
+            if (is_int($data)) $this->inst = $this->inst . $data . '); ';
             if (is_null($data)) $this->inst = $this->inst . "NULL); ";
             $this->duplicate = FALSE;
             self::TransferToMaster($tbl, $this->inst);
           }
         } else if ($this->duplicate == FALSE) {
           $data = $row[$i];
-          if (is_string($data)) $this->inst = $this->inst . '"' . $data . '", ';
+          if (is_string($data)) $this->inst = $this->inst . "'" . $data . "', ";
           if (is_int($data)) $this->inst = $this->inst . $data . ", ";
           if (is_null($data)) $this->inst = $this->inst . "NULL, ";
         }
