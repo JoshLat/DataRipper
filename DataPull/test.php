@@ -1,4 +1,4 @@
-<?php
+  ``<?php
 
 
 //MS SQL Iteration
@@ -47,14 +47,14 @@ class Pull extends DATA {
   }
 
   function ExecuteSQLGET($tbl, $sql) {
-    if ($this->query2 = $this->conn2->prepare($sql)) {
+    if ($this->query2 = sqlsrv_prepare($this->conn2, "SELECT * FROM dbo." . $tbl, array(NULL))) {
     } else {
-      die($this->conn2->error);
+      die(sqlsrv_errors());
     }
-    $this->query2->execute();
-    if ($this->query2->error) {
+    sqlsrv_execute($this->query2)
+    if (!$this->query2) {
       self::console("FAILURE! Copying row to master databse! :(");
-      self::console($this->query2->error);
+      self::console(sqlsrv_errors());
     }
     //self::console("Successfully Ripped a row of Data!\n");
   }
@@ -72,10 +72,10 @@ class Pull extends DATA {
   }
   function CheckLocalDataDuplicates($tbl, $field) {
     //$this->query2 = $this->conn2->prepare("SELECT * FROM ". $tbl . " WHERE id = '" . $field . "'");
-    $this->query2 = $this->conn2->prepare("SELECT * FROM " . $tbl . " WHERE id=?;");
-    $this->query2->bind_param("s", $field);
+    $this->query2 = sqlsrv_prepare($this->conn2, "SELECT * FROM " . $tbl . " WHERE id=" . $field . ";");
     //var_dump($this->query2);
-    $this->query2->execute();
+    sqlsrv_execute($this->query2);
+    //SJFEIOGJLGJKSDJFLKDSJFJLKDSJFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;A
     if ($this->conn2->error) {
       echo $this->conn2->error;
     }
@@ -90,12 +90,9 @@ class Pull extends DATA {
   }
 
   function GetKeyIndex($result, $key) {
-    for ($i = 0; $i <= sqlsrv_num_fields($result); $i++) {
-      //var_dump($result->fetch_field_direct($i)->name);
-      //if ($result->fetch_field_direct($i)->name == $key) {
-      var_dump(sqlsrv_field_metadata($result)[$i]->Name);
-      if (sqlsrv_field_metadata($result) == $key) {
-        //self::console("found a field matching specified key at index: " . $i);
+    for ($i = 0; $i <= (sqlsrv_num_fields($result) - 1); $i++) {
+      if (sqlsrv_field_metadata($result)[$i]["Name"] == $key) {
+        self::console("Found a field matching specified primary key at index: " . $i);
         return $i;
       }
     }
@@ -103,7 +100,6 @@ class Pull extends DATA {
 
   function HandleDataRIP($tbl, $key) {
     self::console("Starting HandleDataRIP");
-    var_dump($this->query);
     $iteration = 0;
     $duplicates = 0;
     //$this->res = $this->query->get_result();
@@ -117,20 +113,22 @@ class Pull extends DATA {
     //var_dump($this->res->fetch_field_direct(2));
     //echo $this->GetKeyIndex($this->res);
     //break;
+    self::console("Getting Key's Index.... DONE!");
     $keyindex = $this->GetKeyIndex($this->res, $key);
-    self::console($keyindex);
-    while ($row = $this->res->fetch_row()) {
+
+    while ($row = sqlsrv_fetch_array($this->res, SQLSRV_FETCH_NUMERIC)) {
+      self::console("Iterations: " . $rowcount);
       $rowcount++;
       $this->inst = $this->inst . "INSERT INTO " . $tbl . " VALUES (";
       $this->duplicate = FALSE;
       for ($i = 0; $i < sizeof($row); $i++) {
         $iteration++;
         if ($i == 1) {
-          if (!self::CheckLocalDataDuplicates($tbl, $row[$keyindex])) {
+          /*if (!self::CheckLocalDataDuplicates($tbl, $row[$keyindex])) {
             $duplicates++;
             $this->duplicate = TRUE;
             $this->inst = "";
-          }
+          }*/
         }
 
         if ($i == $this->columns) {
@@ -193,7 +191,7 @@ class Pull extends DATA {
   function MainSQL($tbl, $type, $key) {
     self::console("Starting MainSQL");
     if ($type == DATA::PULL) {
-      $this->query = sqlsrv_prepare($this->conn, "SELECT * FROM " . $tbl, array(NULL));
+      $this->query = sqlsrv_prepare($this->conn, "SELECT * FROM dbo." . $tbl, array(NULL));
       //$this->query = $this->conn->prepare("SELECT * FROM " . $tbl);
       sqlsrv_execute($this->query);
       if (!$this->query) {
