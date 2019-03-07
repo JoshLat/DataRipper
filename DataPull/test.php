@@ -47,7 +47,7 @@ class Pull extends DATA {
   }
 
   function TransferToMaster($tbl, $sql) {
-    self::console($sql);
+    //self::console($sql);
     if ($this->L_query = sqlsrv_prepare($this->R_conn, $sql, array(NULL))) {
     } else {
       die(sqlsrv_errors());
@@ -72,15 +72,19 @@ class Pull extends DATA {
     }
     //self::console("Successfully Ripped a row of Data!\n");
   }
-  function CheckLocalDataDuplicates($tbl, $field) {
+  function CheckRowCount($query) {
+    while ($row = sqlsrv_fetch_array($query, SQLSRV_FETCH_NUMERIC)) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  function CheckLocalDataDuplicates($tbl, $key, $field) {
     self::console("Checking Duplicates....");
     //$this->L_query = $this->R_conn->prepare("SELECT * FROM ". $tbl . " WHERE id = '" . $field . "'");
-    $this->L_query = sqlsrv_prepare($this->R_conn, "SELECT * FROM " . $tbl . " WHERE id=" . $field . ";");
-    //var_dump($this->L_query);
+    $this->L_query = sqlsrv_prepare($this->L_conn, "SELECT * FROM " . $tbl . " WHERE " . $key . "='" . $field . "'");
     sqlsrv_execute($this->L_query);
-    //SJFEIOGJLGJKSDJFLKDSJFJLKDSJFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;A
-    //var_dump($result);
-    //echo $result->num_rows;
+    self::console("duplicate rows?: " . self::CheckRowCount($this->L_query));
     if (sqlsrv_num_rows($this->L_query) == 0) {
       self::console("NON-DUPLICATE");
       return TRUE;
@@ -103,7 +107,7 @@ class Pull extends DATA {
     $fields = NULL;
     for ($i = 0; $i <= (sqlsrv_num_fields($result) - 1); $i++) {
       $inst = sqlsrv_field_metadata($result)[$i]["Name"];
-      self::console(sqlsrv_field_metadata($result)[$i]["Name"]);
+      //self::console(sqlsrv_field_metadata($result)[$i]["Name"]);
       if ($i == (sqlsrv_num_fields($result) - 1)) {
         $fields = $fields . ", " . $inst . ")";
       } else if ($i > 0) {
@@ -136,14 +140,13 @@ class Pull extends DATA {
     $keyindex = $this->GetKeyIndex($this->res, $key);
 
     while ($row = sqlsrv_fetch_array($this->res, SQLSRV_FETCH_NUMERIC)) {
-      self::console("Iterations: " . $rowcount);
       $rowcount++;
       $this->inst = $this->inst . "INSERT INTO " . $tbl . " " . self::GetFieldNames($this->res). " VALUES (";
       $this->duplicate = FALSE;
       for ($i = 0; $i < sizeof($row); $i++) {
         $iteration++;
         if ($i == 1) {
-          if (!self::CheckLocalDataDuplicates($tbl, $row[$keyindex])) {
+          if (!self::CheckLocalDataDuplicates($tbl, $key, $row[$keyindex])) {
             $duplicates++;
             $this->duplicate = TRUE;
             $this->inst = "";
