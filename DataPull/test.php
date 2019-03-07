@@ -1,4 +1,4 @@
-  <?php
+<?php
 
 
 //MS SQL Iteration
@@ -51,7 +51,7 @@ class Pull extends DATA {
     } else {
       die(sqlsrv_errors());
     }
-    sqlsrv_execute($this->query2)
+    sqlsrv_execute($this->query2);
     if (!$this->query2) {
       self::console("FAILURE! Copying row to master databse! :(");
       self::console(sqlsrv_errors());
