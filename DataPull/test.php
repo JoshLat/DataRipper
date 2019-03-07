@@ -46,17 +46,19 @@ class Pull extends DATA {
     }
   }
 
-  function ExecuteSQLGET($tbl, $sql) {
-    if ($this->L_query = sqlsrv_prepare($this->R_conn, "SELECT * FROM dbo." . $tbl, array(NULL))) {
+  function TransferToMaster($tbl, $sql) {
+    self::console($sql);
+    if ($this->L_query = sqlsrv_prepare($this->R_conn, $sql, array(NULL))) {
     } else {
       die(sqlsrv_errors());
     }
     sqlsrv_execute($this->L_query);
-    if (!$this->L_query) {
+    if (sqlsrv_errors()) {
       self::console("FAILURE! Copying row to master databse! :(");
-      self::console(sqlsrv_errors());
+      var_dump(sqlsrv_errors());
+      return;
     }
-    //self::console("Successfully Ripped a row of Data!\n");
+    self::console("Successfully Ripped a row of Data!");
   }
   function ExecuteSQLDEPLOY($tbl, $sql) {
     if ($this->R_query = $this->L_conn->prepare($sql)) {
@@ -97,6 +99,22 @@ class Pull extends DATA {
     }
   }
 
+  function GetFieldNames($result) {
+    $fields = NULL;
+    for ($i = 0; $i <= (sqlsrv_num_fields($result) - 1); $i++) {
+      if ($i > 0) {
+        $fields += (", ''" . sqlsrv_field_metadata($result)[$i]["Name"] . "'");
+      } else if ($i === sqlsrv_num_fields($result) - 1) {
+        $fields += (sqlsrv_field_metadata($result)[$i]["Name"] . "')");
+      } else {
+        $fields += ("('" . sqlsrv_field_metadata($result)[$i]["Name"] . "'");
+      }
+
+        self::console("Found a field matching specified primary key at index: " . $i);
+        return $i;
+    }
+  }
+
   function HandleDataRIP($tbl, $key) {
     self::console("Starting HandleDataRIP");
     $iteration = 0;
@@ -118,7 +136,7 @@ class Pull extends DATA {
     while ($row = sqlsrv_fetch_array($this->res, SQLSRV_FETCH_NUMERIC)) {
       self::console("Iterations: " . $rowcount);
       $rowcount++;
-      $this->inst = $this->inst . "INSERT INTO " . $tbl . " VALUES (";
+      $this->inst = $this->inst . "INSERT INTO " . $tbl . " " . $self::GetFieldNames(). " VALUES (";
       $this->duplicate = FALSE;
       for ($i = 0; $i < sizeof($row); $i++) {
         $iteration++;
@@ -137,7 +155,7 @@ class Pull extends DATA {
             if (is_int($data)) $this->inst = $this->inst . $data . "); ";
             if (is_null($data)) $this->inst = $this->inst . "NULL); ";
             $this->duplicate = FALSE;
-            self::ExecuteSQLGET($tbl, $this->inst);
+            self::TransferToMaster($tbl, $this->inst);
           }
         } else if ($this->duplicate == FALSE) {
           $data = $row[$i];
